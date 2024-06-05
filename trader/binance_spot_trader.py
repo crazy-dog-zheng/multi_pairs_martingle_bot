@@ -62,8 +62,8 @@ class BinanceSpotTrader(object):
                     # won't trade the UP and DOWN token.
                     continue
 
-                if item.get('quoteAsset') == 'USDT' and item.get('status') == "TRADING":
-
+                # if item.get('quoteAsset') == 'USDT' and item.get('status') == "TRADING":
+                if item.get('status') == "TRADING":
                     symbol_data = {"symbol": symbol}
                     for filters in item['filters']:
                         if filters['filterType'] == 'PRICE_FILTER':
@@ -355,9 +355,9 @@ class BinanceSpotTrader(object):
         index = 0
         for signal in signal_data.get('signals', []):  # 首次开仓信号
             s = signal['symbol']
-            if signal['signal'] == 1 and index < left_times and s not in pos_symbols and signal[
-                'hour_turnover'] >= config.turnover_threshold:
-                ## allowed_lists and blocked_lists cannot be satisfied at the same time
+            if (signal['signal'] == 1 and index < left_times and s not in pos_symbols
+                    and signal['hour_turnover'] >= config.turnover_threshold):
+                # allowed_lists and blocked_lists cannot be satisfied at the same time
                 if len(config.allowed_lists) > 0 and s in config.allowed_lists:
                     index += 1
                     # the last one hour's the symbol jump over some percent.
@@ -367,7 +367,7 @@ class BinanceSpotTrader(object):
                     index += 1
                     self.place_order(s, signal['pct'], signal['pct_4h'])
 
-                if len(config.allowed_lists) == 0 and config.blocked_lists == 0:
+                if len(config.allowed_lists) == 0 and len(config.blocked_lists) == 0:
                     index += 1
                     self.place_order(s, signal['pct'], signal['pct_4h'])
 
