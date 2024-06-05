@@ -86,6 +86,12 @@ class BinanceSpotTrader(object):
         else:
             self.tickers_dict = {}
 
+    def get_ticker(self, symbol):
+        tick = self.http_client.get_ticker(symbol)
+        symbol = tick['symbol']
+        ticker = {"bid_price": float(tick['bidPrice']), "ask_price": float(tick["askPrice"])}
+        self.tickers_dict[symbol] = ticker
+
     def get_klines(self, symbol: str, interval, limit):
         return self.http_client.get_kline(symbol=symbol, interval=interval, limit=limit)
 
@@ -210,8 +216,8 @@ class BinanceSpotTrader(object):
         """
         check about the current position and order status.
         """
-
         self.get_all_tickers()
+        # self.get_ticker("USDTBRL")
         if len(self.tickers_dict.keys()) == 0:
             return
 
@@ -347,7 +353,7 @@ class BinanceSpotTrader(object):
         self.initial_id = signal_data.get('id', self.initial_id)
 
         index = 0
-        for signal in signal_data.get('signals', []):
+        for signal in signal_data.get('signals', []):  # 首次开仓信号
             s = signal['symbol']
             if signal['signal'] == 1 and index < left_times and s not in pos_symbols and signal[
                 'hour_turnover'] >= config.turnover_threshold:
