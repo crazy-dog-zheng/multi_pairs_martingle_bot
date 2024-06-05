@@ -39,6 +39,7 @@ class OrderType(Enum):
     LIMIT = "LIMIT"
     MARKET = "MARKET"
     STOP = "STOP"
+    LIMIT_MAKER = "LIMIT_MAKER"
 
 
 class RequestMethod(Enum):

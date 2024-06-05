@@ -126,7 +126,6 @@ class BinanceSpotTrader(object):
                             logging.info(
                                 f"{symbol}: buy order was partially filled, price: {price}, qty: {qty}, time: {datetime.now()}")
 
-
                     elif check_order.get('status') == OrderStatus.FILLED.value:
                         delete_buy_orders.append(buy_order)
                         # 买单成交，挂卖单.
@@ -140,7 +139,6 @@ class BinanceSpotTrader(object):
 
                         logging.info(
                             f"{symbol}: buy order was filled, price: {price}, qty: {qty}, time: {datetime.now()}")
-
 
                     elif check_order.get('status') == OrderStatus.NEW.value:
                         print(f"{buy_order.get('symbol')}: buy order is new, time: {datetime.now()}")
@@ -243,12 +241,14 @@ class BinanceSpotTrader(object):
                     drawdown_pct = pos_data.get('profit_max_price', 0) / bid_price - 1
 
                     dump_pct = pos_data.get('last_entry_price', 0) / bid_price - 1
-                    current_increase_pos_count = pos_data.get('current_increase_pos_count',1)
+                    current_increase_pos_count = pos_data.get('current_increase_pos_count', 1)
 
                     loss_pct = avg_price / bid_price - 1  # loss percent.
 
                     # there is profit here, consider whether exit this position.
-                    if profit_pct >= config.exit_profit_pct and drawdown_pct >= config.profit_drawdown_pct and len(self.sell_orders_dict.get(s, [])) <= 0:
+                    if profit_pct >= config.exit_profit_pct and drawdown_pct >= config.profit_drawdown_pct and len(
+                            self.sell_orders_dict.get(s, [])) <= 0:
+                        # 盈利退出
                         """
                         the position is profitable and drawdown meets requirements.
                         """
@@ -262,11 +262,11 @@ class BinanceSpotTrader(object):
                         # the price tick and quantity precision.
 
                         qty = floor_to(abs(pos), min_qty)
-                        price = ask_price * (1 - config.taker_price_pct)
+                        price = ask_price * (1 - config.taker_price_pct)  # taker_price_pct 配置为负数确保是maker单
                         price = round_to(price, min_price)
 
                         sell_order = self.http_client.place_order(symbol=s, order_side=OrderSide.SELL,
-                                                                  order_type=OrderType.LIMIT, quantity=qty,
+                                                                  order_type=OrderType.LIMIT_MAKER, quantity=qty,
                                                                   price=price)
 
                         if sell_order:
@@ -275,7 +275,8 @@ class BinanceSpotTrader(object):
                             orders.append(sell_order)
                             self.sell_orders_dict[s] = orders
 
-                    elif loss_pct >= config.stop_loss_pct > 0 and len(self.sell_orders_dict.get(s, [])) <= 0:
+                    elif loss_pct >= config.stop_loss_pct > 0 >= len(self.sell_orders_dict.get(s, [])):
+                        # 止损退出
                         # set the stop loss
                         # cancel the buy orders. when we want to place sell orders, we need to cancel the buy orders.
                         buy_orders = self.buy_orders_dict.get(s, [])
@@ -286,11 +287,11 @@ class BinanceSpotTrader(object):
                         # the price tick and quantity precision.
 
                         qty = floor_to(abs(pos), min_qty)
-                        price = ask_price * (1-config.taker_price_pct)
+                        price = ask_price * (1 - config.taker_price_pct)
                         price = round_to(price, min_price)
 
                         sell_order = self.http_client.place_order(symbol=s, order_side=OrderSide.SELL,
-                                                                  order_type=OrderType.LIMIT, quantity=qty,
+                                                                  order_type=OrderType.LIMIT_MAKER, quantity=qty,
                                                                   price=price)
 
                         if sell_order:
@@ -299,15 +300,15 @@ class BinanceSpotTrader(object):
                             orders.append(sell_order)
                             self.sell_orders_dict[s] = orders
 
-                    elif dump_pct >= config.increase_pos_when_drop_down and len(self.buy_orders_dict.get(s,
-                                                                                                         [])) <= 0 and current_increase_pos_count <= config.max_increase_pos_count:
-
+                    elif (dump_pct >= config.increase_pos_when_drop_down and len(self.buy_orders_dict.get(s, [])) <= 0
+                          and current_increase_pos_count <= config.max_increase_pos_count):
+                        # 回调加仓
                         # if the market price continue drop down you can increase your positions.
                         # cancel the sell orders, when we want to place buy orders, we need to cancel the sell orders.
                         sell_orders = self.sell_orders_dict.get(s, [])
                         for sell_order in sell_orders:
-                            print(
-                                "cancel the sell orders, when we want to place buy orders, we need to cancel the sell orders")
+                            print("cancel the sell orders, when we want to place buy orders, "
+                                  "we need to cancel the sell orders")
                             self.http_client.cancel_order(s, sell_order.get('clientOrderId'))
 
                         buy_value = config.initial_trade_value * config.trade_value_multiplier ** current_increase_pos_count
@@ -317,7 +318,7 @@ class BinanceSpotTrader(object):
                         qty = floor_to(float(buy_value) / float(price), min_qty)
 
                         buy_order = self.http_client.place_order(symbol=s, order_side=OrderSide.BUY,
-                                                                 order_type=OrderType.LIMIT, quantity=qty,
+                                                                 order_type=OrderType.LIMIT_MAKER, quantity=qty,
                                                                  price=price)
                         if buy_order:
                             # resolve buy orders
