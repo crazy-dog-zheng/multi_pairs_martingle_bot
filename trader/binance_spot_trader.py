@@ -380,7 +380,7 @@ class BinanceSpotTrader(object):
         qty = floor_to(float(buy_value) / float(price), min_qty)
 
         buy_order = self.http_client.place_order(symbol=symbol, order_side=OrderSide.BUY,
-                                                 order_type=OrderType.LIMIT, quantity=qty,
+                                                 order_type=OrderType.LIMIT_MAKER, quantity=qty,
                                                  price=price)
 
         print(
